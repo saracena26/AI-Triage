@@ -1,6 +1,6 @@
 from llama_cpp import Llama
 
-MODEL_PATH = "/home/shay/projects/llama.cpp/models/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
+MODEL_PATH = "/home/demo/projects/llama.cpp/models/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 
 llm = Llama(model_path=MODEL_PATH, n_threads=4, temperature=0.2)
 
