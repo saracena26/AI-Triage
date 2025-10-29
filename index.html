@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ER AI Triage Chatbox</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f7f6; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        .vitals-form label { display: block; margin-top: 10px; font-weight: bold; }
+        .vitals-form input { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .vitals-form button { width: 100%; padding: 12px; margin-top: 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        .vitals-form button:hover { background-color: #0056b3; }
+        #results { margin-top: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #e9ecef; }
+        .classification-output { font-size: 1.2em; font-weight: bold; color: #dc3545; margin-bottom: 10px; }
+        .reasoning-output { white-space: pre-wrap; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏥 Patient Triage AI Interface</h1>
+        <form id="triage-form" class="vitals-form">
+            <label for="temperature">Temperature (°F):</label>
+            <input type="number" id="temperature" name="temperature" step="0.1" required value="98.6">
+            
+            <label for="heart_rate">Heart Rate (bpm):</label>
+            <input type="number" id="heart_rate" name="heart_rate" required value="75">
+            
+            <label for="bp_systolic">BP Systolic (mmHg):</label>
+            <input type="number" id="bp_systolic" name="bp_systolic" required value="120">
+            
+            <label for="bp_diastolic">BP Diastolic (mmHg):</label>
+            <input type="number" id="bp_diastolic" name="bp_diastolic" required value="80">
+            
+            <label for="oxygen_saturation">Oxygen Saturation (%):</label>
+            <input type="number" id="oxygen_saturation" name="oxygen_saturation" step="0.1" required value="98.0">
+            
+            <button type="submit" id="submit-button">Get Triage & Reasoning</button>
+        </form>
+
+        <div id="results">
+            <h2>Triage Result:</h2>
+            <div class="classification-output" id="classification">... Awaiting Vitals ...</div>
+            <strong>Reasoning:</strong>
+            <pre class="reasoning-output" id="reasoning">Enter patient vitals and submit the form to see the AI's explanation.</pre>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('triage-form').addEventListener('submit', async function(e) {
+            e.preventDefault(); // Stop the default form submission
+
+            const form = e.target;
+            const button = document.getElementById('submit-button');
+            const classificationOutput = document.getElementById('classification');
+            const reasoningOutput = document.getElementById('reasoning');
+
+            button.disabled = true;
+            button.textContent = 'Processing... Please wait for AI response.';
+            classificationOutput.textContent = 'Calculating...';
+            reasoningOutput.textContent = 'Model is generating explanation...';
+
+            // Gather data from the form
+            const vitalsData = {
+                temperature: parseFloat(form.temperature.value),
+                heart_rate: parseInt(form.heart_rate.value),
+                bp_systolic: parseInt(form.bp_systolic.value),
+                bp_diastolic: parseInt(form.bp_diastolic.value),
+                oxygen_saturation: parseFloat(form.oxygen_saturation.value)
+            };
+
+            try {
+                // Send the data to the FastAPI endpoint
+                const response = await fetch('http://localhost:8000/triage', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(vitalsData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Update the results display
+                classificationOutput.textContent = data.classification;
+                reasoningOutput.textContent = data.ai_reasoning;
+                
+                // Color code the classification
+                if (data.classification === 'Critical') {
+                    classificationOutput.style.color = '#dc3545'; // Red
+                } else if (data.classification === 'May need attention') {
+                    classificationOutput.style.color = '#ffc107'; // Yellow
+                } else {
+                    classificationOutput.style.color = '#28a745'; // Green
+                }
+
+            } catch (error) {
+                console.error('Error fetching triage data:', error);
+                classificationOutput.textContent = 'Error!';
+                reasoningOutput.textContent = `Could not connect to the API: ${error.message}`;
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Get Triage & Reasoning';
+            }
+        });
+    </script>
+</body>
+</html>
