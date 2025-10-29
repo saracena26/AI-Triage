@@ -1,109 +1,102 @@
-# ER AI Patient Triage – Local AI Setup Instructions (Updated Realistic Thresholds)
+# ER AI Patient Triage – Local AI Setup Instructions
 
 This contains steps, definitions, workflow, vital thresholds, and Python scripts to run your local AI triage system with updated median-based and buffer logic.
 
 ---
 
-## Folder Structure
+## 📁 Project Folder Structure
 ```
-Projects/ (Create the directory manually)
+Projects/
 ├─ llama.cpp/        # LLaMA C++ repo with GGUF models (created by git clone)
-│  └─ models/        # GGUF model files
-├─ scripts/          # Python scripts for AI interaction (create manually)
+│  └─ models/        # To store GGUF model files 
+├─ scripts/          # Python scripts for AI interaction
 └─ llama_env/        # Python virtual environment for dependencies
 ```
 
 **Purpose:**
-- `llama_env/` isolates Python dependencies.
-- `llama.cpp/` runs GGUF models locally.
-- `scripts/` contains Python scripts to interact with the AI model.
+- 🧠 llama_env/: Keeps Python dependencies isolated
+- ⚙️ llama.cpp/: Runs LLaMA GGUF models locally
+- 💬 scripts/: Python scripts to interact with the model
 
 **Why `llama_env` is needed:**
 - Keeps dependencies separate; nothing messes with your system Python.
 - Avoids conflicts: Different projects might need different versions of the same package. venv keeps them from fighting each other.
-- Easy to copy: If someone else wants to run your project, they can just create a venv and install the same packages—your project won’t break.
+- Easy to copy: If someone else wants to run your project, they can create a venv and install the same packages without affecting your project.
 - Safe testing: You can try out new packages without worrying about breaking your system Python.
-- Think of it like this:
+- 💡 Analogy:
   - **System Python** = the whole apartment building
   - **llama_env** = your own private room where you can do whatever you want
 
 ---
 
-**Definitions**
+**📘 Key Definitions**
 - `llama_env`: Python virtual environment.
 - `llama.cpp`: C++ implementation to run LLaMA GGUF models locally.
-- Python bindings (`llama_cpp`): Interface to interact with models from Python.
-- Prompt: Instruction text given to the AI.
-- Model: Pre-trained neural network (e.g., LLaMA 3B).
+- llama_cpp: Python bindings to interact with LLaMA models
+- Prompt: Instruction or question given to the AI
+- Model: Pre-trained neural network (e.g., LLaMA 3B)
 - 3B, 7B: Number of model parameters in billions.
 
 ---
+## 📁 Project Folder Structure
 
-## 1. Update and Install System Build Dependencies
+**1️⃣ Update System Dependencies**
 
-- You can be in any directory for the following commands:
+- You can be in any directory for the following commands. - These install compilers and essential tools.
 
 `sudo apt update && sudo apt install -y`
 
 `build-essential cmake python3-dev python3-pip`
 
-- Installs compilers and essential tools.
-
 ---
 
-## 2. Create project paths
+**2️⃣ Create Project Paths**
 
-- Create Model and Script paths:
+- Creates your main folders for models and scripts.
 
 `mkdir -p ~/projects/models ~/projects/scripts`
 
-- Creates the main projects folder and the models and scripts subdirectories.
-
 ---
 
-## 3. Download Model
+**3️⃣ Download Model**
 
-- Command for model download including directory:
+- Downloads the LLaMA 3.2 3B model in GGUF format.
 
 `wget -O ~/projects/models/Llama-3.2-3B-Instruct-Q4_K_M.gguf https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf` 
 
-- Downloads the required GGUF model file.
+---
+
+**4️⃣ Create Virtual Environment**
+
+- Creates the isolated environment llama_env.
+
+```
+cd ~/projects
+python3 -m venv llama_env
+```
 
 ---
 
-## 4. Create Venv (llama_env)
+**5️⃣ Activate the Environment**
 
-- Directory: cd to ~/projects/
-
-`python3 -m venv llama_env`
-
-- Creates the virtual environment folder named llama_env
-
----
-
-## 5. Activate Venv
-
-- Directory: ~/projects/
+- Your terminal prompt should show: (llama_env) ✅ After running this command
 
 `source ~/projects/llama_env/bin/activate`
 
-- ** Crucial step. Your prompt should now show (llama_env). **
-
 ---
 
-## 6. Install Library
+**6️⃣ Install Required Library**
 
-- Check that your terminal is showing that venv is active. (llama_env)
+- Installs Python bindings for LLaMA. (Double check that your terminal is showing that venv is active. (llama_env))
 
 `pip install llama-cpp-python`
 
-- Installs the Python bindings inside the isolated environment.
-
 ---
 
-## 7. Triage Python Script
+**🧩 7️⃣ The Triage Script**
 
-- This script was created using VS Code
+- 📍Path: ~/projects/scripts/test_script.py
+- 💡 Created with: VS Code
 
 Python Script – `test_script.py` (Weighted Borderline Logic)
 
@@ -112,7 +105,7 @@ Python Script – `test_script.py` (Weighted Borderline Logic)
 ```python
 from llama_cpp import Llama
 
-MODEL_PATH = "/home/shay/projects/llama.cpp/models/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
+MODEL_PATH = "/home/demo/projects/llama.cpp/models/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 llm = Llama(model_path=MODEL_PATH, n_threads=4, temperature=0.2)
 
 VITAL_THRESHOLDS = {
@@ -162,31 +155,31 @@ if __name__ == "__main__":
 ```
 ---
 
-## 8. Running python script for prompt test
+**8️⃣ Run the Script**
 
 - Check that your terminal is showing that venv is active. (llama_env)
+- This will run the triage script. Ensure the script's MODEL_PATH is correct within the python script: /home/demo/projects/models/Llama-3.2-3B-Instruct-Q4_K_M.gguf.
 
 `python3 ~/projects/scripts/test_script.py`
 
-- Runs the triage script. Ensure the script's MODEL_PATH is correct within the python script: /home/<user>/projects/models/Llama-3.2-3B-Instruct-Q4_K_M.gguf.
+---
 
-## Patient Vital Thresholds & Medians (Realistic Ranges)
+## 💓 Patient Vital Thresholds & Medians
 | Vital                  | Low  | High | Median | Notes / Reasoning |
 |------------------------|------|------|--------|------------------|
-| Temperature (°F)       | 96.8 | 100.4 | 98.6  | Normal adult range; fever ≥100.4°F is critical |
-| Heart Rate (bpm)       | 50   | 120  | 85    | Resting adult range; bradycardia <50, tachycardia >120 may indicate critical condition |
-| Systolic BP (mmHg)     | 90   | 140  | 115   | Normal systolic; <90 = hypotension, >140 = hypertensive crisis |
-| Diastolic BP (mmHg)    | 60   | 90   | 75    | Normal diastolic; outside may indicate hypotension/hypertension |
-| Oxygen Saturation (%)  | 90   | 100  | 95    | <90% indicates hypoxia; critical for triage |
+| 🌡️ Temperature (°F)    | 96.8 | 100.4 | 98.6  | Normal adult range; fever ≥100.4°F is critical |
+| ❤️Heart Rate (bpm)     | 50   | 120  | 85    | Resting adult range; bradycardia <50, tachycardia >120 may indicate critical condition |
+| 💉Systolic BP (mmHg)   | 90   | 140  | 115   | Normal systolic; <90 = hypotension, >140 = hypertensive crisis |
+| 💢Diastolic BP (mmHg)  | 60   | 90   | 75    | Normal diastolic; outside may indicate hypotension/hypertension |
+| 🫁Oxygen Saturation (%)| 90   | 100  | 95    | <90% indicates hypoxia; critical for triage |
 
 ---
-## 9. How it Works
-1. **Rule-based Critical Check:** Any vital ≤ low or ≥ high → `Critical`.
-2. **Median-based Classification for Borderline Cases:**
-   - Buffer zones around median determine borderline values.
-   - If ≥2 vitals are borderline → `May need attention`.
-   - All vitals near median → `No need for attention`.
-3. **Fallback:** Guarantees a valid triage response.
+## 🧠 How It Works
+1. **Rule-based Critical Check:** → Any vital ≤ low or ≥ high → 🟥 Critical
+2. **Median-based Borderline Check** → Uses buffer logic to find “almost abnormal” values
+3. **Weighted Decision →**
+    - Vitals ≥2 Borderline → 🟨 May need attention.
+    - All Normal → 🟩 No need for attention
 
 Flowchart:
 ```
@@ -213,16 +206,19 @@ May need attention  No need for attention
 
 ---
 
-## 10. Example Inputs
-| Category                | Temp (°F) | HR (bpm) | BP Sys | BP Dia | O₂ (%) | Output |
-|------------------------|-----------|----------|--------|--------|--------|--------|
-| Critical               | 101       | 130      | 145    | 95     | 85     | Critical |
-| May need attention     | 99        | 110      | 125    | 80     | 95     | May need attention |
-| No need for attention  | 98.5      | 80       | 115    | 75     | 97     | No need for attention |
+## 🧪 Example Inputs & Outputs
+| Category                | Temp (°F) | HR (bpm) | BP Sys | BP Dia | O₂ (%) | Output                |
+|-------------------------|-----------|----------|--------|--------|--------|-----------------------|
+| 🔴 Critical             | 101       | 130      | 145    | 95     | 85     | Critical              |
+| 🟡 Borderline           | 99        | 110      | 125    | 80     | 95     | May need attention    |
+| 🟢 Normal               | 98.5      | 80       | 115    | 75     | 97     | No need for attention |
 
 ---
-This ensures:
-- Realistic triage outcomes
-- Weighted borderline checks
-- Clear differentiation between Critical, May need attention, and No need for attention.
+
+## ✅ Summary
+- Realistic triage logic with **median + buffer zones**
+- **Weighted classification** (borderline-aware)
+- Clear output:
+  - **Critical | May need attention | No need for attention**
+   
 
