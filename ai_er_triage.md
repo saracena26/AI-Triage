@@ -200,7 +200,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from fastapi.responses import HTMLResponse
 import asyncio
-import test_script  # Imports your existing model and triage logic
+import test_script  # Imports existing model and triage logic
 
 # ------------------- APP SETUP -------------------
 app = FastAPI(title="AiER Triage API")
@@ -214,7 +214,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Import the pre-loaded Llama model instance from your script
+# Import the pre-loaded Llama model instance from script
 llm = test_script.llm
 # -----------------------------------------------------
 
@@ -240,7 +240,7 @@ async def triage(vitals: Vitals):
     classification = triage_result["classification"]
     reason_summary = triage_result["reason_summary"] # Capture the pre-made reason
 
-    # Step 2: Reasoning-style AI prompt - ABSOLUTE MINIMALIST PROMPT
+    # Step 2: Reasoning-style AI prompt
     # We ask the model to rewrite the input line using a standard instruction format.
     ai_prompt = f"""
     Combine the following two pieces of information into one concise medical summary sentence:
@@ -251,7 +251,7 @@ async def triage(vitals: Vitals):
     """
 
     # Step 3: Use the local model to generate the explanation asynchronously
-    # We are setting a low max_tokens and stopping on newline to force a concise, single-line output.
+    # We are setting a low max_tokens and stopping on newline
     output = await asyncio.to_thread(llm, ai_prompt, max_tokens=120, stop=['\n'])
     explanation = output["choices"][0]["text"].strip()
 
