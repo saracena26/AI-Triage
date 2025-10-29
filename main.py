@@ -17,7 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Import the pre-loaded Llama model instance from your script
+# Import the pre-loaded Llama model instance from script
 llm = test_script.llm
 # -----------------------------------------------------
 
@@ -54,7 +54,7 @@ async def triage(vitals: Vitals):
     """
 
     # Step 3: Use the local model to generate the explanation asynchronously
-    # We are setting a low max_tokens and stopping on newline to force a concise, single-line output.
+    # We are setting a low max_tokens and stopping on newline.
     output = await asyncio.to_thread(llm, ai_prompt, max_tokens=120, stop=['\n'])
     explanation = output["choices"][0]["text"].strip()
 
