@@ -164,6 +164,107 @@ if __name__ == "__main__":
 
 ---
 
+## 🚀 Run as a FastAPI Web App (Browser Chatbox Interface)
+
+> ⚠️ **Optional:** The web interface is only needed if you want to interact with the AI in your browser.
+> Running the terminal-based script (`test_script.py`) is enough to use the triage system.
+
+---
+
+**🧱 Step 1: Install FastAPI and Uvicorn**
+      
+- Activate your environment first:
+  - `source ~/projects/llama_env/bin/activate`
+- Then install:
+  - `pip install fastapi uvicorn`
+
+---
+
+**🧩 Step 2: Create the API File**
+
+- 📍 **Path:** `~/projects/scripts/api_triage.py`
+
+```python
+from fastapi import FastAPI
+from pydantic import BaseModel
+from llama_cpp import Llama
+from fastapi.middleware.cors import CORSMiddleware
+
+MODEL_PATH = "/home/demo/projects/llama.cpp/models/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
+llm = Llama(model_path=MODEL_PATH, n_threads=4, temperature=0.2)
+
+app = FastAPI()
+
+# Allow browser requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class Vitals(BaseModel):
+    temperature: float
+    heart_rate: int
+    bp_systolic: int
+    bp_diastolic: int
+    oxygen_saturation: float
+
+@app.post("/triage")
+async def triage(vitals: Vitals):
+    classification_prompt = f"""
+    As a medical triage assistant, classify the patient based on these vitals:
+    Temperature: {vitals.temperature}°F
+    Heart Rate: {vitals.heart_rate} bpm
+    BP: {vitals.bp_systolic}/{vitals.bp_diastolic} mmHg
+    O₂ Saturation: {vitals.oxygen_saturation}%
+    
+    Respond with:
+    1️⃣ Classification (Critical, May need attention, No attention needed)
+    2️⃣ One-sentence reasoning.
+    """
+    output = llm.create_completion(classification_prompt, max_tokens=100)
+    text = output["choices"][0]["text"].strip()
+    
+    return {"ai_reasoning": text, "classification": text.split()[0]}
+```
+
+---
+
+> ⚠️ **Optional:**  Skip if you just want to use the terminal script.
+
+**🌐 Step 3: Add the Web Interface**
+
+- 📍 File: index.html
+- This HTML file provides a browser-based interface. It is included in this repository (scripts/index.html).
+- ⚙️ Note: Ensure that the fetch() URL points to your local FastAPI endpoint:
+
+```javascript
+
+const response = await fetch("http://localhost:8000/triage", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(vitalsData)
+});
+const data = await response.json();
+console.log(data);
+
+```
+
+---
+
+**▶️ Step 4: Run the API Server**
+
+- From your terminal:
+  `uvicorn scripts.api_triage:app --reload`
+
+- Then open your HTML file in a browser:
+  `file:///home/demo/projects/scripts/index.html`
+
+- You’ll now be able to enter vitals, hit Submit, and watch your local AI reason through patient conditions — all in your browser. 🚑💬
+
+---
+
 ## 💓 Patient Vital Thresholds & Medians
 | Vital                  | Low  | High | Median | Notes / Reasoning |
 |------------------------|------|------|--------|------------------|
