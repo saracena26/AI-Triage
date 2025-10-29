@@ -10,6 +10,9 @@ Projects/
 ├─ llama.cpp/        # LLaMA C++ repo with GGUF models (created by git clone)
 │  └─ models/        # To store GGUF model files 
 ├─ scripts/          # Python scripts for AI interaction
+│  ├─ test_script.py  # Core triage logic (Required for all use cases)
+│  ├─ main.py         # FastAPI web server (Optional for web UI)
+│  └─ index.html      # Browser interface (Optional for web UI)
 └─ llama_env/        # Python virtual environment for dependencies
 ```
 
@@ -17,6 +20,10 @@ Projects/
 - 🧠 llama_env/: Keeps Python dependencies isolated
 - ⚙️ llama.cpp/: Runs LLaMA GGUF models locally
 - 💬 scripts/: Python scripts to interact with the model
+
+**Note**
+- test_script.py is always required (terminal or web).
+- main.py and index.html are only needed if you want a browser interface.
 
 **Why `llama_env` is needed:**
 - Keeps dependencies separate; nothing messes with your system Python.
@@ -166,8 +173,9 @@ if __name__ == "__main__":
 
 ## 🚀 Run as a FastAPI Web App (Browser Chatbox Interface)
 
-> ⚠️ **Optional:** The web interface is only needed if you want to interact with the AI in your browser.
-> Running the terminal-based script (`test_script.py`) is enough to use the triage system.
+- ⚠️ **Optional:** You can run a FastAPI web app to interact with the AI in a browser.
+- Running the terminal-based script (`test_script.py`) is enough to use the triage system.
+- Files needed: main.py (web server) + index.html (frontend) + test_script.py (triage logic).
 
 ---
 
@@ -182,27 +190,35 @@ if __name__ == "__main__":
 
 **🧩 Step 2: Create the API File**
 
-- 📍 **Path:** `~/projects/scripts/api_triage.py`
+- 📍 File: ~/projects/scripts/main.py
+- Uses the logic in test_script.py and serves index.html.
 
 ```python
+
 from fastapi import FastAPI
-from pydantic import BaseModel
-from llama_cpp import Llama
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from fastapi.responses import HTMLResponse
+import asyncio
+import test_script  # Imports your existing model and triage logic
 
-MODEL_PATH = "/home/demo/projects/llama.cpp/models/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
-llm = Llama(model_path=MODEL_PATH, n_threads=4, temperature=0.2)
+# ------------------- APP SETUP -------------------
+app = FastAPI(title="AiER Triage API")
 
-app = FastAPI()
-
-# Allow browser requests
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Import the pre-loaded Llama model instance from your script
+llm = test_script.llm
+# -----------------------------------------------------
+
+# Define the data model for incoming vitals
 class Vitals(BaseModel):
     temperature: float
     heart_rate: int
@@ -210,44 +226,117 @@ class Vitals(BaseModel):
     bp_diastolic: int
     oxygen_saturation: float
 
+
+# ------------------- API ENDPOINT: Triage -------------------
 @app.post("/triage")
 async def triage(vitals: Vitals):
-    classification_prompt = f"""
-    As a medical triage assistant, classify the patient based on these vitals:
-    Temperature: {vitals.temperature}°F
-    Heart Rate: {vitals.heart_rate} bpm
-    BP: {vitals.bp_systolic}/{vitals.bp_diastolic} mmHg
-    O₂ Saturation: {vitals.oxygen_saturation}%
-    
-    Respond with:
-    1️⃣ Classification (Critical, May need attention, No attention needed)
-    2️⃣ One-sentence reasoning.
     """
-    output = llm.create_completion(classification_prompt, max_tokens=100)
-    text = output["choices"][0]["text"].strip()
+    Analyzes vitals, classifies, and generates AI reasoning asynchronously.
+    """
+    vitals_dict = vitals.model_dump()
+
+    # Step 1: Use the classification logic (returns dict with reason_summary)
+    triage_result = test_script.classify_patient(vitals_dict)
+    classification = triage_result["classification"]
+    reason_summary = triage_result["reason_summary"] # Capture the pre-made reason
+
+    # Step 2: Reasoning-style AI prompt - ABSOLUTE MINIMALIST PROMPT
+    # We ask the model to rewrite the input line using a standard instruction format.
+    ai_prompt = f"""
+    Combine the following two pieces of information into one concise medical summary sentence:
+    Reason: "{reason_summary}"
+    Classification: "{classification}"
     
-    return {"ai_reasoning": text, "classification": text.split()[0]}
+    Summary:
+    """
+
+    # Step 3: Use the local model to generate the explanation asynchronously
+    # We are setting a low max_tokens and stopping on newline to force a concise, single-line output.
+    output = await asyncio.to_thread(llm, ai_prompt, max_tokens=120, stop=['\n'])
+    explanation = output["choices"][0]["text"].strip()
+
+    # Step 4: Return the result
+    return {
+        "classification": classification,
+        "ai_reasoning": explanation
+    }
+
+# ------------------- API ENDPOINT: Serve Frontend -------------------
+@app.get("/", response_class=HTMLResponse)
+async def serve_frontend():
+    """
+    Serves the simple HTML interface when a user accesses the root URL.
+    """
+    try:
+        with open("index.html", "r") as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content, status_code=200)
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Frontend HTML file not found!</h1>", status_code=404)
+
 ```
 
 ---
 
-> ⚠️ **Optional:**  Skip if you just want to use the terminal script.
+**🌐 Step 3: Add index.html (Browser Interface)**
 
-**🌐 Step 3: Add the Web Interface**
+- 📍 File: ~/projects/scripts/index.html
 
-- 📍 File: index.html
-- This HTML file provides a browser-based interface. It is included in this repository (scripts/index.html).
-- ⚙️ Note: Ensure that the fetch() URL points to your local FastAPI endpoint:
+```HTML
 
-```javascript
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ER AI Patient Triage</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f0f4f7; }
+        h1 { color: #333; }
+        input { margin: 5px 0; padding: 8px; width: 200px; }
+        button { padding: 10px 20px; margin-top: 10px; }
+        #output { margin-top: 20px; padding: 10px; border: 1px solid #ccc; background: #fff; }
+    </style>
+</head>
+<body>
+    <h1>ER AI Patient Triage</h1>
+    <label>Temperature (°F): <input type="number" id="temperature" step="0.1"></label><br>
+    <label>Heart Rate (bpm): <input type="number" id="heart_rate"></label><br>
+    <label>BP Systolic: <input type="number" id="bp_systolic"></label><br>
+    <label>BP Diastolic: <input type="number" id="bp_diastolic"></label><br>
+    <label>O₂ Saturation (%): <input type="number" id="oxygen_saturation" step="0.1"></label><br>
+    <button onclick="submitVitals()">Submit</button>
+    <div id="output"></div>
 
-const response = await fetch("http://localhost:8000/triage", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(vitalsData)
-});
-const data = await response.json();
-console.log(data);
+    <script>
+        async function submitVitals() {
+            const vitalsData = {
+                temperature: parseFloat(document.getElementById("temperature").value),
+                heart_rate: parseInt(document.getElementById("heart_rate").value),
+                bp_systolic: parseInt(document.getElementById("bp_systolic").value),
+                bp_diastolic: parseInt(document.getElementById("bp_diastolic").value),
+                oxygen_saturation: parseFloat(document.getElementById("oxygen_saturation").value)
+            };
+
+            try {
+                const response = await fetch("http://localhost:8000/triage", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(vitalsData)
+                });
+
+                const data = await response.json();
+                document.getElementById("output").innerHTML = `
+                    <strong>Classification:</strong> ${data.classification}<br>
+                    <strong>AI Reasoning:</strong> ${data.ai_reasoning}
+                `;
+            } catch (error) {
+                document.getElementById("output").innerHTML = `Error: ${error}`;
+            }
+        }
+    </script>
+</body>
+</html>
 
 ```
 
@@ -258,10 +347,9 @@ console.log(data);
 - From your terminal:
   `uvicorn scripts.api_triage:app --reload`
 
-- Then open your HTML file in a browser:
-  `file:///home/demo/projects/scripts/index.html`
+- Open browser to: http://localhost:8000/
 
-- You’ll now be able to enter vitals, hit Submit, and watch your local AI reason through patient conditions — all in your browser. 🚑💬
+- Enter vitals → Submit → view classification & AI reasoning. 🚑💬
 
 ---
 
